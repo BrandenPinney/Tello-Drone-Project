@@ -2,7 +2,7 @@ from re import X
 from djitellopy import Tello
 import cv2 as cv
 from time import sleep
-import movement as mv
+import movement_noDrone as mv
 import haar_cascade as hc
 import mission
 import math
@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as np
 import matplotlib.patches as patches
+from shapely.geometry import Polygon
 
 
 fbRange = [32000, 52000] # preset parameter for detected image boundary size
@@ -70,8 +71,9 @@ def backForth(drone, location, flyZone, moveIncr):
     return location
 
 def approx_cell_decomp(drone, droneLocation, obstacleList, boundary):
-    '''input: drone reference, current drone location, array of obstactles, array of boundary coordinates
-    Decomposes the area into cells and returns waypoints that are in the safe to fly zone.'''
+    '''input: array of obstactles, array of boundary coordinates
+    Decomposes the area into cells 
+    output: waypoints that are in the safe to fly zone.'''
     boundary = np.append(boundary, [boundary[0]], 0)
     w = 30
     xmin = np.amin(boundary[:,0]) + (w/2)
@@ -94,19 +96,23 @@ def approx_cell_decomp(drone, droneLocation, obstacleList, boundary):
         ymin = c[1] - w/2
         ymax = c[1] + w/2
         pts = [[xmin, ymin],[xmax,ymin],[xmax, ymax],[xmin, ymax]]
+        poly_cell = Polygon(pts)
         p_cell = Path(pts)
         isInside = []
         for ob in obstacleList:
+            # This section is used for plotting for now
             codes = [Path.MOVETO]
             for i in range(len(ob.coords)-1):
                 codes.append(Path.LINETO)
             codes.append(Path.CLOSEPOLY)
+            poly_obst = Polygon(ob.coords)
             ob.coords = np.append(ob.coords, [ob.coords[0]], 0)
             p_obst = Path(ob.coords, codes)
             patch = patches.PathPatch(p_obst, facecolor='blue')
             ax.add_patch(patch)
-            isInside = np.append(isInside, p_obst.contains_points(pts))
-        if not(bool(isInside.any())):
+            #isInside = np.append(isInside, p_obst.contains_points(pts))
+            isInside = np.append(isInside, poly_cell.intersects(poly_obst))
+        if not(isInside.any()):
             waypoints = np.append(waypoints, c)
             waypoints = waypoints.reshape(-1,2)
     plt.plot(boundary[:,0], boundary[:,1], color='black', lw=3, label='boundary')
