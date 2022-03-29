@@ -1,11 +1,13 @@
-from djitellopy import Tello
+import bridge
 import cv2 as cv
-from time import sleep
-from qr_reader import droneReadQR
-import movement_test as mv
+from djitellopy import Tello
 import haar_cascade as hc
-import mission
 import math
+import mission
+import movement_test as mv
+from qr_reader import droneReadQR
+import sys       # to get commandline arguments
+from time import sleep
 
 fbRange = [62000,82000]#[32000, 52000] # preset parameter for detected image boundary size
 w, h = 720, 480 # display size of the screen
@@ -17,7 +19,7 @@ def trackObject(drone, info, location, turbines, detected_object):
     '''Take the variable for the drone, the output array from calling findTurbine in haar_cascade.py, and the current drone x,y location and relative angle (initialized as [0, 0, 0]).
     It scans for the target object of findTurbine and approaches the target. Once it is at a pre-determined distance fbRange, it will scan and return the value of the QR code
     and return the drone to the starting point.'''
-    # Looks for the detected object through Haar Cascades and slowly approaches 
+    # Looks for the detected object through Haar Cascades and slowly approaches
     area = info[1]
     x, y = info[0]
     width = info[2]
@@ -52,12 +54,12 @@ def trackObject(drone, info, location, turbines, detected_object):
         if(0 < x < 300):
             # The drone needs to angle to the left to center the target.
             new_angle = int((x / 360) * 41.3)
-            location = mv.move(location, drone, ccw=new_angle)        
+            location = mv.move(location, drone, ccw=new_angle)
             return location, detected_object
         elif(x >= 420):
             # The drone needs to angle to the right to center the target.
             new_angle = int(((x - 360) / 360) * 41.3)
-            location = mv.move(location, drone, cw=new_angle)        
+            location = mv.move(location, drone, cw=new_angle)
             return location, detected_object
         if area > fbRange[0] and area < fbRange[1]:
             # The drone has approached the target and will scan for a QR code
@@ -75,7 +77,7 @@ def trackObject(drone, info, location, turbines, detected_object):
 
 def qrDetection(drone, location, turbines):
     drone.move_down(50)
-    QR = None 
+    QR = None
     while True:
         QR, img, info = droneReadQR(drone)
         img = frame.frame
@@ -92,7 +94,7 @@ def qrDetection(drone, location, turbines):
                     turbine_found = 1
                     location = mv.move(location, drone, up=20)
                     mission.mission0(location, drone, turbines[i], QR)
-                    turbines.pop(i) 
+                    turbines.pop(i)
                     if len(turbines) != 0:
                         mv.move(location, drone, ccw=45)
                         break
@@ -138,7 +140,15 @@ def test(mission_list, turbine_list):
         cv.waitKey(1)
 
 if __name__ == "__main__":
+
+    # gui will call this script with 1 argument: "gui"
+    mode = (len(sys.argv) == 2) and (sys.argv[1] == "gui")
+
+    # import bridge if calling from gui
+    if (mode): bridge = bridge.Bridge()
+
     turbines = {"Wind_Turbine_1": [1, 0, 0, 0]}
+
     drone = Tello()
     drone.connect()
     sleep(0.5)
@@ -148,7 +158,9 @@ if __name__ == "__main__":
     sleep(0.5)
     drone.takeoff()
     sleep(0.5)
+
     mv.move(location, drone, up=40)
+
     while True:
         frame = drone.get_frame_read()
         sleep(0.2)
@@ -156,7 +168,42 @@ if __name__ == "__main__":
         img = cv.resize(img, (w, h))
         img, info = hc.findTurbine(img)
         #QR, img, info = droneReadQR(drone)
-        location, detected_object = trackObject(drone, info, location, turbines, detected_object)
+
+        if (mode and bridge.abort):
+
+            drone.land()
+            break
+
+        if (mode and bridge.manualControl):
+
+            # if bridge active and manual control enabled
+
+            if (bridge.manualState[0]): mv.move(location, drone, fwd=25)
+            elif (bridge.manualState[1]): mv.move(location, drone, back=25)
+            elif (bridge.manualState[2]): pass # todo: left
+            elif (bridge.manualState[3]): pass # todo: right
+            elif (bridge.manualState[4]): mv.move(location, drone, up=20)
+            elif (bridge.manualState[5]): mv.move(location, drone, down=20)
+            elif (bridge.manualState[6]): mv.move(location, drone, ccw=10)
+            elif (bridge.manualState[7]): mv.move(location, drone, cw=10)
+
+        else:
+
+            # autopilot
+
+            location, detected_object = trackObject(drone, info, location, turbines, detected_object)
+
         img = cv.resize(img, None, fx=1, fy=1, interpolation=cv.INTER_AREA)
-        cv.imshow("Output", img)
-        cv.waitKey(1)
+
+        if (mode):
+
+            # update image if script called from gui
+            bridge.setImage(img)
+
+            # get new input from gui
+            bridge.getInput()
+
+        else:
+
+            cv.imshow("Output", img)
+            cv.waitKey(1)
