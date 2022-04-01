@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as np
 import matplotlib.patches as patches
-from shapely.geometry import Polygon
+from shapely.geometry import box, Polygon
 
 
 fbRange = [32000, 52000] # preset parameter for detected image boundary size
@@ -19,23 +19,36 @@ location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the
 turbine_locations = [] # List containing the locations of found turbines
 detected_object = 0 # A flag to determine if the camera detected an object in the previous 5 frames
 
+def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygraph=[]):
+    '''The drone explores a back and forth path. Currently the funcion ends after each movement to
+    allow for an external check of the area.
+    
+    Input:
+        drone (Tello) : drone variable
+        location : [x, y, angle] Current coordinates and angle of drone
+        flyZone : [xMin, yMin, xMax, yMax] four vertices representing area to be explored
+        moveIncr (int) : distance (cm) for drone to move before checking the area, This will also be the 
+        distance between traversals
+        display (bool, optional) : default = false. If true a graph of the projected path will be displayed
 
-def backForth(drone, location, flyZone, moveIncr):
-    '''Takes the drone object, the drones current location, a fly zone to search in a
-    back and forth motion and a distance in cm to move each time. Fly zone must be a rectangular
-    area flyZone[0] = xmin, flyZone[1] = xmax, flyZone[2] = ymin, 
-    flyZone[3] = ymax
-    Returns new location.'''
 
-    xMin = flyZone[0] #+ 20           #safety bounds
-    yMin = flyZone[2] #+ 20
-    xMax = flyZone[1] #- 20 
-    yMax = flyZone[3] #- 20
+    Output:
+        location : [x, y, angle] updated coordinates and angle of drone
+        totalDist (int) : total distance (cm) traveled by the drone 
+        valid (int) : returns 1 if not end of path, returns 0 if end of path'''
+
+    xMin = flyZone[0] 
+    yMin = flyZone[2] 
+    xMax = flyZone[1]  
+    yMax = flyZone[3] 
+
+    totalDist = 0                   # tracks distance traveled
 
     #maxMove = 30                #how much to move at a time;
-    shortLen = 30               #how far to move on short edge;
+    #shortLen = 30               #how far to move on short edge;
+
     yNew = location[1] + moveIncr * math.sin(math.radians(location[2]))
-    print(location[0], location[1], location[2])
+    #print(location[0], location[1], location[2])
  
     #straighten out with horizontal closest to angle  <180=90 (left)       else=270 (right)
     if location[2]<90:
@@ -47,30 +60,161 @@ def backForth(drone, location, flyZone, moveIncr):
     else: 
         location = mv.move(location, drone, cw=location[2]-270)
 
+
+    if display:
+        xgraph.append(location[0])    
+        ygraph.append(location[1])
+
+
+    # Travel Up
     if location[2]<180:
         if yNew > yMax:
-            location = mv.move(location, drone, fwd=round(yMax-location[1]))
+            if round(yMax-location[1])>20:
+                totalDist += round(yMax-location[1])
+                location = mv.move(location, drone, fwd=round(yMax-location[1]))
+                if display:
+                    xgraph.append(location[0])    
+                    ygraph.append(location[1])
             location = mv.move(location, drone, ccw=90)
             sleep(0.5)
-            xNew = location[0] + moveIncr * math.sin(math.radians(location[2]))
+            xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                location = mv.return_path(location, drone)
+                mv.return_path(location, drone)
+                totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
+                return location, totalDist, 0
+    # Travel Down
     else:
         if yNew < yMin:
-            location = mv.move(location, drone, fwd=round(location[1]-yMin))
+            if round(location[1]-yMin)>20:
+                totalDist += round(location[1]-yMin)
+                location = mv.move(location, drone, fwd=round(location[1]-yMin))
+                if display:
+                    xgraph.append(location[0])    
+                    ygraph.append(location[1])
             location = mv.move(location, drone, cw=91)
             sleep(0.5)
-            xNew = location[0] + moveIncr * math.sin(math.radians(location[2]))
+            xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                drone.land()
-                location = mv.return_path(location, drone)
-    location = mv.move(location, drone, fwd = moveIncr)
+                mv.return_path(location, drone)
+                totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
+                return location, totalDist, 0
+    totalDist += moveIncr
+    location = mv.move(location, drone, fwd=moveIncr)
+    return location, totalDist, 1
 
-    return location
 
-def approx_cell_decomp(drone, droneLocation, obstacleList, boundary):
+def spiral(drone, location, flyZone, moveIncr, display=False):
+    #poly_bound = Polygon(boundary)    
+    #cp = poly_bound.centroid
+    #poly_bound.exterior.coords
+    '''The drone explores a spiral path. This function needs to be modified to check the camera itself
+    
+    Input:
+        drone (Tello) : drone variable
+        location : [x, y, angle] Current coordinates and angle of drone
+        flyZone : [xMin, yMin, xMax, yMax] four vertices representing area to be explored
+        moveIncr (int) : distance (cm) for drone to move before checking the area, This will also be the 
+        distance between traversals
+        display (bool, optional) : default = false. If true a graph of the projected path will be displayed
+
+    Output:
+        location : [x, y, angle] updated coordinates and angle of drone
+        totalDist (int) : total distance (cm) traveled by the drone '''
+
+    xMin = flyZone[0]
+    yMin = flyZone[2] 
+    xMax = flyZone[1]  
+    yMax = flyZone[3] 
+    totalDist = 0        #keeps track of path distance
+
+    # Go to correct location if starting location is not in the lower right corner
+    #if yMax - location[1] > location[1] - yMin:
+     #  if xMax - location[0] > location[0] - xMin:
+      #    if round(location[2]) !=90:
+       #       location = mv.move(location, drone, ccw=)
+
+    # Ensure that the drone is in the lower right corner and rotated correctly, otherwise quit
+    if location[0] != xMax or location[1] != yMin or location[2] != 0:
+        print("Needs to be further developed to support this")
+        quit()
+
+    xDist = xMax-xMin               # distance needed for next horizontal traverse
+    yDist = yMax-yMin               # distance needed for next vertical traverse
+    xt = 0                          # xtraversed
+    yt = 0                          # ytraversed
+    ygraph = []
+    xgraph = []
+    f = 0                           # zero until the drone has gone in one straight line
+    while True: # Drone cannot travel less than 20 cm
+        if display:
+                xgraph.append(location[0])    
+                ygraph.append(location[1])
+        # travel the yDist 
+        if round(location[2])==90 or round(location[2])==270:
+            if yDist < 20:
+                break
+            ##### CHECK CAMERA
+            sleep(0.2)    
+            if yt + moveIncr > yDist:
+                if yDist-yt>=20:
+                    location = mv.move(location,drone,fwd=yDist-yt)
+                    totalDist += yDist-yt
+                yt = 0
+                if f != 0:                  # decrease distance to travel each time after first line
+                    yDist -= moveIncr
+                location =mv.move(location,drone, ccw=90)
+                f =1  
+            else:
+                yt += moveIncr
+                location = mv.move(location, drone, fwd=moveIncr)
+                totalDist += moveIncr
+        # Travel the xDist
+        elif round(location[2])==0 or round(location[2])==180:
+            if xDist < 20:
+                break
+            ##### CHECK CAMERA 
+            sleep(0.2)
+            if xt + moveIncr > xDist:
+                if xDist-xt>=20:
+                    location = mv.move(location,drone,fwd=xDist-xt)
+                    totalDist += xDist-xt
+                xt = 0
+                if f != 0:
+                    xDist -= moveIncr
+                location = mv.move(location,drone, ccw=90)
+                f = 1
+            else:
+                xt += moveIncr
+                location = mv.move(location,drone, fwd=moveIncr)
+                totalDist += moveIncr
+        # The code is not developed to work with any drone angle other then 0, 90, 180,n270
+        else:
+            print("Should not reach this print statement") 
+            quit()
+    
+
+    # plot the path
+    if display:
+        xgraph.append(location[0])    
+        ygraph.append(location[1])
+        xgraph.append(xgraph[0])
+        ygraph.append(ygraph[0])
+        plt.plot(xgraph, ygraph, '-kx', lw=2, label='spiralPath')
+        plt.show()
+    
+    # return to original location and track the distance
+    mv.return_path(location, drone)
+    totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
+
+    return location, totalDist
+
+
+
+    
+
+def approx_cell_decomp(obstacleList, boundary):
     '''input: array of obstactles, array of boundary coordinates
     Decomposes the area into cells 
     output: waypoints that are in the safe to fly zone.'''
@@ -123,25 +267,50 @@ def approx_cell_decomp(drone, droneLocation, obstacleList, boundary):
     return waypoints
          
         
-def testBF(location):
+def testBF(location, bounds, display=False):
     '''Tests back and for search function given the current location of the drone.
-        bounds = [-270,0, 0, 270] works well for the drone cage'''
+        bounds =  [-275,0, 0, 275] works well for the drone cage'''
     mission_list = [1, 1, 1, 1]
     turbine_list = ["WindTurbine_2"]
-    bounds = [-275,0, 0, 275]
     drone = Tello()
-    drone.connect()
-    sleep(0.5)
-    print("Current battery remaining: ", drone.get_battery())
-    sleep(0.3)
-    drone.streamon()
-    sleep(0.5)
-    drone.takeoff()
-    sleep(0.5)
-
-    while True:
-        location = backForth(drone,location,bounds,50)
+    # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
+    #drone.connect()
+    #sleep(0.5)
+    #print("Current battery remaining: ", drone.get_battery())
+    #sleep(0.3)
+    #drone.streamon()
+    #sleep(0.5)
+    #drone.takeoff()
+    #sleep(0.5)
+    # END OF SECTION TO COMMENT OUT
+    valid = 1
+    dist = 0
+    ygraph = []
+    xgraph = []
+    while valid:
+        [location, totalDist, valid] = backForth(drone, location, bounds, 50, display, xgraph, ygraph)
+        dist += totalDist
         sleep(0.5)
+    if display:
+        xgraph.append(xgraph[0])
+        ygraph.append(ygraph[0])
+        plt.plot(xgraph, ygraph, '-kx', lw=2, label='spiralPath')
+        plt.show()
+    return dist
+
+def test_cellDecomp():
+    '''Example tests of approximate cell decomposition'''
+    boundary =  [[0,0],[0,305],[305,305],[305,0]]
+    #boundary = [[-270, 0], [-270,270], [0, 270], [0,0]] 
+
+    obstacles = np.array([obstacle('wind_turbine1', [[50,50],[150,50],[100,100],[75,120],[50,100]]),
+                          obstacle('wind_turbine1', [[150,200],[300,200],[300,300],[200,250]])])
+    approx_cell_decomp(drone, location, obstacles, boundary)
+
+    obstacles = np.array([obstacle('wind_turbine1', [[50,50],[30,130],[80,120],[120,80],[60,40]]),
+                          obstacle('wind_turbine1', [[150,200],[300,175],[275,300],[200,250]]),
+                          obstacle('wind_tubine3', [[270, 78], [250,20], [280,50]])])
+    approx_cell_decomp(obstacles, boundary)
 
 class obstacle: 
     def __init__(self, name, coords): 
@@ -151,22 +320,24 @@ class obstacle:
  
 
 if __name__ == "__main__":
-    '''Tests cell decomposition'''
     drone = Tello()
-    #obstacles = np.array([obstacle('wind_turbine1', [[50,50],[150,50],[100,100],[75,120],[50,100]]),
-     #                       obstacle('wind_turbine1', [[150,200],[300,200],[300,300],[200,250]])])
-    obstacles = np.array([obstacle('wind_turbine1', [[50,50],[30,130],[80,120],[120,80],[60,40]]),
-                          obstacle('wind_turbine1', [[150,200],[300,175],[275,300],[200,250]]),
-                          obstacle('wind_tubine3', [[270, 78], [250,20], [280,50]])])
 
-    approx_cell_decomp(drone, location, obstacles, [[0,0],[0,305],[305,305],[305,0]])
-
-
-#orient toward long edge
-#straight check camera
-#if reach boundary
-    #take care of boundary turn
-    #check camera after turn
-    #if reach boundary short edge
-        #land
-    #else move forward 
+     # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
+    #drone.connect()
+    #sleep(0.5)
+    #print("Current battery remaining: ", drone.get_battery())
+    #sleep(0.3)
+    #drone.streamon()
+    #sleep(0.5)
+    #drone.takeoff()
+    #sleep(0.5)
+    # END OF SECTION TO COMMENT OUT
+    
+    bounds = [-327,0, 0, 327]              #works with tan path in lab
+    #bounds = [-150,0,0,150]
+    [location,distSpiral] = spiral(drone, location, bounds, 50, display=False)
+    #bounds = [-150,0,0,300]
+    location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
+    distBF = testBF(location, bounds, display=False)
+    print(distBF, distSpiral)
+    #test_cellDecomp(location)
