@@ -1,8 +1,10 @@
+from ast import increment_lineno
+from msilib.schema import MoveFile
 from re import X
 from djitellopy import Tello
 import cv2 as cv
 from time import sleep
-import movement_noDrone as mv
+import movement as mv
 import haar_cascade as hc
 import mission
 import math
@@ -11,6 +13,7 @@ from matplotlib.path import Path
 import numpy as np
 import matplotlib.patches as patches
 from shapely.geometry import box, Polygon
+import time
 
 
 fbRange = [32000, 52000] # preset parameter for detected image boundary size
@@ -104,6 +107,105 @@ def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygra
     location = mv.move(location, drone, fwd=moveIncr)
     return location, totalDist, 1
 
+def backForth2(drone, location, flyZone, moveIncr, display=False):
+    '''The drone explores a back and forth path.
+    
+    Input:
+        drone (Tello) : drone variable
+        location : [x, y, angle] Current coordinates and angle of drone
+        flyZone : [xMin, yMin, xMax, yMax] four vertices representing area to be explored
+        moveIncr (int) : distance (cm) for drone to move before checking the area, This will also be the 
+        distance between traversals
+        display (bool, optional) : default = false. If true a graph of the projected path will be displayed
+
+
+    Output:
+        location : [x, y, angle] updated coordinates and angle of drone
+        totalDist (int) : total distance (cm) traveled by the drone '''
+
+    xMin = flyZone[0] 
+    yMin = flyZone[2] 
+    xMax = flyZone[1]  
+    yMax = flyZone[3] 
+
+    # Ensure that the drone is in the lower right corner and rotated correctly, otherwise quit
+    if location[0] != xMin or location[1] != yMin or location[2] != 0:
+        print("Needs to be further developed to support this")
+        quit()
+
+    totalDist = 0                   # tracks distance traveled
+    xgraph = []
+    ygraph = []
+    #maxMove = 30                #how much to move at a time;
+    #shortLen = 30               #how far to move on short edge;
+
+    xDist = xMax-xMin               # distance needed for next horizontal traverse
+    yDist = yMax-yMin               # distance needed for next vertical traverse
+    turnDir = 1                     # 0 for clockwise 1 for counter clockwise
+    MovesBeforeTurn = int(xDist/moveIncr)
+    y=0
+    while True:
+        if display:
+            xgraph.append(location[0])    
+            ygraph.append(location[1])
+        for i in range(MovesBeforeTurn):
+            mv.move(location, drone, fwd=moveIncr)
+            sleep(0.5)
+            # CHECK CAMERA
+            totalDist += moveIncr
+            if display:
+                xgraph.append(location[0])    
+                ygraph.append(location[1])
+        if (xDist % moveIncr) > 20:
+            mv.move(location, drone, fwd=xDist%moveIncr)
+            sleep(0.5)
+            totalDist += xDist%moveIncr
+            # CHECK CAMERA
+            if display:
+                xgraph.append(location[0])    
+                ygraph.append(location[1])
+        y += moveIncr
+        if y > yDist:
+            break
+        if turnDir:
+            mv.move(location, drone, ccw=90)
+        else:
+            mv.move(location, drone, cw=90)
+        sleep(0.5)
+        # CHECK CAMERA
+        mv.move(location, drone, fwd=moveIncr)
+        sleep(0.5)
+        # CHECK CAMERA
+        totalDist += moveIncr
+        if display:
+            xgraph.append(location[0])    
+            ygraph.append(location[1])
+        if turnDir:
+            mv.move(location, drone, ccw=90)
+        else:
+            mv.move(location, drone, cw=90)
+        sleep(0.5)
+        # CHECK CAMERA
+        turnDir = (turnDir + 1) % 2 
+    
+    # plot the path
+    if display:
+        xgraph.append(location[0])    
+        ygraph.append(location[1])
+        xgraph.append(xgraph[0])
+        ygraph.append(ygraph[0])
+        plt.plot(xgraph, ygraph, '-kx', lw=2, label='spiralPath')
+        plt.show()
+    
+    # return to original location and track the distance
+    mv.return_path(location, drone)
+    totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
+
+    return location, totalDist
+    
+        
+
+
 
 def spiral(drone, location, flyZone, moveIncr, display=False):
     #poly_bound = Polygon(boundary)    
@@ -136,7 +238,7 @@ def spiral(drone, location, flyZone, moveIncr, display=False):
        #       location = mv.move(location, drone, ccw=)
 
     # Ensure that the drone is in the lower right corner and rotated correctly, otherwise quit
-    if location[0] != xMax or location[1] != yMin or location[2] != 0:
+    if location[0] != xMin or location[1] != yMin or location[2] != 0:
         print("Needs to be further developed to support this")
         quit()
 
@@ -156,7 +258,7 @@ def spiral(drone, location, flyZone, moveIncr, display=False):
             if yDist < 20:
                 break
             ##### CHECK CAMERA
-            sleep(0.2)    
+            #sleep(0.2)    
             if yt + moveIncr > yDist:
                 if yDist-yt>=20:
                     location = mv.move(location,drone,fwd=yDist-yt)
@@ -175,7 +277,7 @@ def spiral(drone, location, flyZone, moveIncr, display=False):
             if xDist < 20:
                 break
             ##### CHECK CAMERA 
-            sleep(0.2)
+            #sleep(0.2)
             if xt + moveIncr > xDist:
                 if xDist-xt>=20:
                     location = mv.move(location,drone,fwd=xDist-xt)
@@ -273,16 +375,6 @@ def testBF(location, bounds, display=False):
     mission_list = [1, 1, 1, 1]
     turbine_list = ["WindTurbine_2"]
     drone = Tello()
-    # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
-    #drone.connect()
-    #sleep(0.5)
-    #print("Current battery remaining: ", drone.get_battery())
-    #sleep(0.3)
-    #drone.streamon()
-    #sleep(0.5)
-    #drone.takeoff()
-    #sleep(0.5)
-    # END OF SECTION TO COMMENT OUT
     valid = 1
     dist = 0
     ygraph = []
@@ -323,21 +415,29 @@ if __name__ == "__main__":
     drone = Tello()
 
      # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
-    #drone.connect()
-    #sleep(0.5)
-    #print("Current battery remaining: ", drone.get_battery())
-    #sleep(0.3)
-    #drone.streamon()
-    #sleep(0.5)
-    #drone.takeoff()
-    #sleep(0.5)
+    drone.connect()
+    sleep(0.5)
+    print("Current battery remaining: ", drone.get_battery())
+    sleep(0.3)
+    drone.streamon()
+    sleep(0.5)
+    drone.takeoff()
+    sleep(0.5)
     # END OF SECTION TO COMMENT OUT
     
-    bounds = [-327,0, 0, 327]              #works with tan path in lab
+    bounds = [0,321, 0, 324]
+
+    #bounds = [0,224, 0, 224]
+    #bounds = [-327,0, 0, 327]
     #bounds = [-150,0,0,150]
+    start_time = time.time()
     [location,distSpiral] = spiral(drone, location, bounds, 50, display=False)
-    #bounds = [-150,0,0,300]
-    location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
-    distBF = testBF(location, bounds, display=False)
-    print(distBF, distSpiral)
+    #location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
+    #[location,distBF2] = backForth2(drone, location, bounds, 50, display=False)
+    end_time = time.time()
+    print("--- %s seconds ---", end_time - start_time)
+    #location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
+    #bounds = [-328,0, 0, 324]
+    #distBF = testBF(location, bounds, display=False)
+    #print(distBF, distBF2)
     #test_cellDecomp(location)
