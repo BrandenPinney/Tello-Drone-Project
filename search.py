@@ -4,7 +4,7 @@ from re import X
 from djitellopy import Tello
 import cv2 as cv
 from time import sleep
-import movement_noDrone as mv
+import movement_test as mv
 import haar_cascade as hc
 import mission
 import math
@@ -83,7 +83,7 @@ def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygra
             xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                mv.return_path(location, drone)
+                mv.return_path(location, drone, turbine_locations)
                 totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
                 return location, totalDist, 0
     # Travel Down
@@ -100,7 +100,7 @@ def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygra
             xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                mv.return_path(location, drone)
+                mv.return_path(location, drone, turbine_locations)
                 totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
                 return location, totalDist, 0
     totalDist += moveIncr
@@ -211,7 +211,7 @@ def backForth2(drone, location, flyZone, searchWidth, moveIncr, display=False):
         
     
     # return to original location and track the distance
-    mv.return_path(location, drone)
+    mv.return_path(location, drone, turbine_locations)
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
     return location, totalDist
@@ -324,7 +324,7 @@ def spiral(drone, location, flyZone, searchWidth, moveIncr, display=False):
         
     
     # return to original location and track the distance
-    mv.return_path(location, drone)
+    mv.return_path(location, drone, turbine_locations)
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
     return location, totalDist
@@ -430,29 +430,33 @@ if __name__ == "__main__":
     drone = Tello()
 
      # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
-    # drone.connect()
-    # sleep(0.5)
-    # print("Current battery remaining: ", drone.get_battery())
-    # sleep(0.3)
-    # drone.streamon()
-    # sleep(0.5)
-    # drone.takeoff()
-    # sleep(0.5)
+    drone.connect()
+    sleep(0.5)
+    print("Current battery remaining: ", drone.get_battery())
+    sleep(0.3)
+    drone.streamon()
+    sleep(0.5)
+    drone.takeoff()
+    sleep(0.5)
     # END OF SECTION TO COMMENT OUT
     
     bounds = [0,221, 0, 221]
+    sleep(30)
+    location = mv.move(location, drone, up=120)
+    sleep(30)
      #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
     start_time = time.time()
     searchWidth = 50
-    moveIncr = 100
+    moveIncr = 75
     #[location,distSpiral] = spiral(drone, location, bounds, 50, 100, display=True)
     # location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
-    [location,dist] = spiral(drone, location, bounds, searchWidth, moveIncr, display=True)
-    plt.xlabel('x (cm)')
-    plt.ylabel('y (cm)')
-    plt.show()
+    [location,dist] = backForth2(drone, location, bounds, searchWidth, moveIncr, display=False)
+    #plt.xlabel('x (cm)')
+    #plt.ylabel('y (cm)')
+    #plt.show()
     end_time = time.time()
     print('--- ', round(end_time - start_time, 2), ' seconds ---', end_time - start_time)
+    print("Current battery remaining: ", drone.get_battery())
     # #location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
     # #bounds = [-328,0, 0, 324]
     # #distBF = testBF(location, bounds, display=False)
