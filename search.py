@@ -78,7 +78,7 @@ def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygra
             xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                mv.return_path(location, drone)
+                mv.return_path(location, drone, turbine_locations)
                 totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
                 return location, totalDist, 0
     # Travel Down
@@ -94,7 +94,7 @@ def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygra
             xNew = location[0] + moveIncr * math.cos(math.radians(location[2]))
             if xNew < xMin:
                 print("Went through whole area")
-                mv.return_path(location, drone)
+                mv.return_path(location, drone, turbine_locations)
                 totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
                 return location, totalDist, 0
     totalDist += moveIncr
@@ -201,7 +201,7 @@ def backForth2(drone, location, flyZone, searchWidth, moveIncr, display=False):
         plt.show()
     
     # return to original location and track the distance
-    mv.return_path(location, drone)
+    mv.return_path(location, drone, turbine_locations)
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
     return location, totalDist
@@ -310,7 +310,7 @@ def spiral(drone, location, flyZone, searchWidth, moveIncr, display=False):
         plt.show()
     
     # return to original location and track the distance
-    mv.return_path(location, drone)
+    mv.return_path(location, drone, turbine_locations)
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
     return location, totalDist
