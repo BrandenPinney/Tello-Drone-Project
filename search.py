@@ -440,12 +440,14 @@ if __name__ == "__main__":
     # sleep(0.5)
     # END OF SECTION TO COMMENT OUT
     
-    bounds = [0,321, 0, 321]
+    bounds = [0,221, 0, 221]
      #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
     start_time = time.time()
+    searchWidth = 50
+    moveIncr = 100
     #[location,distSpiral] = spiral(drone, location, bounds, 50, 100, display=True)
     # location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
-    [location,distBF2] = backForth2(drone, location, bounds, 100, 50, display=True)
+    [location,dist] = spiral(drone, location, bounds, searchWidth, moveIncr, display=True)
     plt.xlabel('x (cm)')
     plt.ylabel('y (cm)')
     plt.show()
