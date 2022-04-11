@@ -172,7 +172,6 @@ def straight_path(new_location, drone):# No possible collisions were detected
             return_distance = 0
     drone.land()
     drone.streamoff()
-    quit()
 
 
 def target_angle(new_location, drone, return_angle, x, y):
