@@ -446,11 +446,11 @@ if __name__ == "__main__":
     video.start()
     drone.takeoff()
     sleep(1)
-    mv.move(location, drone, up=40)
+    mv.move(location, drone, up=20)
     sleep(0.5)
     # END OF SECTION TO COMMENT OUT
     
-    bounds = [0,321, 0, 324]
+    bounds = [0,221, 0, 221]
     start_time = time.time()
     moveIncr = 100
     searchWidth = 50
