@@ -1,9 +1,11 @@
 from ast import increment_lineno
 from msilib.schema import MoveFile
 from re import X
+from turtle import back
 from djitellopy import Tello
 import cv2 as cv
 from time import sleep
+#import movement_test_noDrone as mv
 import movement_test as mv
 import haar_cascade as hc
 import mission
@@ -207,7 +209,7 @@ def backForth2(drone, location, flyZone, searchWidth, moveIncr, display=False):
         xgraph.append(xgraph[0])
         ygraph.append(ygraph[0])
         plt.figure()
-        plt.plot(xgraph, ygraph, '-kx', lw=2, label='spiralPath')
+        plt.plot(xgraph, ygraph, '-kx', lw=2, label='backforth')
         
     
     # return to original location and track the distance
@@ -432,7 +434,8 @@ if __name__ == "__main__":
      # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
     drone.connect()
     sleep(0.5)
-    print("Current battery remaining: ", drone.get_battery())
+    BatteryStart = drone.get_battery()
+    print("Current battery remaining: ", BatteryStart)
     sleep(0.3)
     drone.streamon()
     sleep(0.5)
@@ -441,22 +444,20 @@ if __name__ == "__main__":
     # END OF SECTION TO COMMENT OUT
     
     bounds = [0,221, 0, 221]
-    sleep(30)
-    location = mv.move(location, drone, up=120)
-    sleep(30)
      #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
     start_time = time.time()
     searchWidth = 50
-    moveIncr = 75
-    #[location,distSpiral] = spiral(drone, location, bounds, 50, 100, display=True)
-    # location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
-    [location,dist] = backForth2(drone, location, bounds, searchWidth, moveIncr, display=False)
+    moveIncr = 85
+    [location,dist] = backForth2(drone, location, bounds, searchWidth, moveIncr)
     #plt.xlabel('x (cm)')
     #plt.ylabel('y (cm)')
     #plt.show()
     end_time = time.time()
     print('--- ', round(end_time - start_time, 2), ' seconds ---', end_time - start_time)
-    print("Current battery remaining: ", drone.get_battery())
+    BatteryEnd = drone.get_battery()
+    print("Current battery remaining: ", BatteryEnd)
+    print("Total battery used: ", BatteryStart - BatteryEnd)
+
     # #location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
     # #bounds = [-328,0, 0, 324]
     # #distBF = testBF(location, bounds, display=False)
