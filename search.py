@@ -5,8 +5,8 @@ from turtle import back
 from djitellopy import Tello
 import cv2 as cv
 from time import sleep
-#import movement_test_noDrone as mv
-import movement_test as mv
+import movement_test_noDrone as mv
+#import movement_test as mv
 import haar_cascade as hc
 import mission
 import math
@@ -24,7 +24,7 @@ location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the
 turbine_locations = [] # List containing the locations of found turbines
 detected_object = 0 # A flag to determine if the camera detected an object in the previous 5 frames
 
-def backForth(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygraph=[]):
+def b(drone, location, flyZone, moveIncr, display=False, xgraph=[], ygraph=[]):
     '''The drone explores a back and forth path. Currently the funcion ends after each movement to
     allow for an external check of the area.
     
@@ -214,9 +214,10 @@ def backForth2(drone, location, flyZone, searchWidth, moveIncr, display=False):
     
     # return to original location and track the distance
     mv.return_path(location, drone, turbine_locations)
+    turns += 1
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
-    return location, totalDist
+    return location, totalDist, turns
     
         
 
@@ -329,7 +330,7 @@ def spiral(drone, location, flyZone, searchWidth, moveIncr, display=False):
     mv.return_path(location, drone, turbine_locations)
     totalDist += int(math.sqrt(location[0]**2 + location[1]**2))
 
-    return location, totalDist
+    return location, totalDist, turns
 
 
 
@@ -396,7 +397,7 @@ def testBF(location, bounds, display=False):
     ygraph = []
     xgraph = []
     while valid:
-        [location, totalDist, valid] = backForth(drone, location, bounds, 50, display, xgraph, ygraph)
+        [location, totalDist, valid] = b(drone, location, bounds, 50, display, xgraph, ygraph)
         dist += totalDist
         sleep(0.5)
     if display:
@@ -432,73 +433,129 @@ if __name__ == "__main__":
     drone = Tello()
 
      # COMMENT OUT SECTION IF TESTING W/O PHYSICAL DRONE
-    drone.connect()
-    sleep(0.5)
-    BatteryStart = drone.get_battery()
-    print("Current battery remaining: ", BatteryStart)
-    sleep(0.3)
-    drone.streamon()
-    sleep(0.5)
-    drone.takeoff()
-    sleep(0.5)
+    # drone.connect()
+    # sleep(0.5)
+    # BatteryStart = drone.get_battery()
+    # print("Current battery remaining: ", BatteryStart)
+    # sleep(0.3)
+    # drone.streamon()
+    # sleep(0.5)
+    # drone.takeoff()
+    # sleep(0.5)
     # END OF SECTION TO COMMENT OUT
     
     bounds = [0,221, 0, 221]
      #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
     start_time = time.time()
     searchWidth = 50
-    moveIncr = 85
-    [location,dist] = backForth2(drone, location, bounds, searchWidth, moveIncr)
-    #plt.xlabel('x (cm)')
-    #plt.ylabel('y (cm)')
-    #plt.show()
+    moveIncr = 50
+    #[location,dist] = spiral(drone, location, bounds, searchWidth, moveIncr, display='True')
+    # plt.xlabel('x (cm)')
+    # plt.ylabel('y (cm)')
+    # plt.show()
     end_time = time.time()
     print('--- ', round(end_time - start_time, 2), ' seconds ---', end_time - start_time)
-    BatteryEnd = drone.get_battery()
-    print("Current battery remaining: ", BatteryEnd)
-    print("Total battery used: ", BatteryStart - BatteryEnd)
+    #BatteryEnd = drone.get_battery()
+    #print("Current battery remaining: ", BatteryEnd)
+    #print("Total battery used: ", BatteryStart - BatteryEnd)
 
-    # #location = [0, 0, 0, 0] # Initialized list of x, y and angle coordinates for the drone.
-    # #bounds = [-328,0, 0, 324]
-    # #distBF = testBF(location, bounds, display=False)
-    # print(distBF2, distSpiral)
-    # plt.show()
-    # #test_cellDecomp(location)
-
-    # GRAPHS DISTANCES FOR DIFFERENT SIZES OF SEARCH AREA
-
-    # y_len = 100
-    # area = []
-    # dSpiral = []
-    # dBF = []
-    # tSpiral = []
-    # tBF = []
-
-    # for i in range(20):
-    #     x_len = 100
-    #     for j in range(20):
+    #####################################################################################
+    # GRAPHS DISTANCES FOR DIFFERENT SIZES OF SEARCH AREA 2nd VERSION
+    # k = 30
+    # y_len = 221
+    # plt.figure()
+    # red = (1, 0, 0)
+    # blue = (0, 0, 1)
+    # for i in range(5):
+    #     x_len = 221
+    #     area = []
+    #     dSpiral = []
+    #     dBF = []
+    #     tSpiral = []
+    #     tBF = []
+    #     for j in range(5):
     #         area.append(x_len*y_len)
     #         bounds = [0, x_len, 0, y_len]
     #         location = [0, 0, 0, 0]
-    #         [location,distSpiral,turnSpiral] = spiral(drone, location, bounds, 50, display=True)
+    #         [location,distSpiral,turnSpiral] = spiral(drone, location, bounds, searchWidth, moveIncr)
     #         location = [0, 0, 0, 0]
-    #         [location,distBF2, turnBF] = backForth2(drone, location, bounds, 50, display=True)
+    #         [location,distBF2, turnBF] = backForth2(drone, location, bounds, searchWidth, moveIncr)
     #         dSpiral.append(distSpiral)
     #         dBF.append(distBF2)
     #         tSpiral.append(turnSpiral)
     #         tBF.append(turnBF)
-    #         x_len += 100
-    # y_len += 100
+    #         x_len += k
+    #     plt.plot(area, tBF, color=blue, marker='.', label=y_len)
+    #     plt.plot(area, tSpiral, color=red, marker='.', label=y_len)
+        
+    #     incr = 0.2
+    #     red = (red[0], red[1]+incr, red[2]+incr)
+    #     blue = (blue[0]+incr, blue[1]+incr, blue[2])
+    #     y_len += k
+    # plt.legend()
+    # plt.grid()
 
-    # plt.figure()
-    # # plt.plot(area, dSpiral, 'r.', label='Spiral')
-    # # plt.plot(area, dBF, 'b.', label='Back-and-Forth')
-    # plt.plot(area, tSpiral, 'r.', label='Spiral')
-    # plt.plot(area, tBF, 'b.', label='Back-and-Forth')
+    # # plt.plot(area, dSpiral, marker='.', label=y_len)
+    # # plt.plot(area, dBF, marker='.', label='Back-and-Forth')
+    # # plt.xlabel("Area (cm)")
+    # # plt.ylabel("Path Distance")
+
+    # # plt.plot(area, tSpiral, color=red, marker='.', label='Spiral')
+    # # plt.plot(area, tBF, color=blue, marker='.', label='Back-and-Forth')
     # plt.xlabel("Area (cm)")
     # plt.ylabel("Turns")
-    # plt.legend()
-    # plt.show()
+  
+    ############################################################################
+    # GRAPHS DISTANCES FOR DIFFERENT SIZES OF SEARCH AREA FIRST VERSION
+    y_len = 100
+    area = []
+    area1 = []
+    dSpiral = []
+    dBF = []
+    tSpiral = []
+    tBF = []
+
+    for i in range(10):
+        x_len = 100
+        for j in range(10):
+            area.append(x_len*y_len)
+            bounds = [0, x_len, 0, y_len]
+            location = [0, 0, 0, 0]
+            [location,distSpiral,turnSpiral] = spiral(drone, location, bounds, searchWidth, moveIncr, display=False)
+            location = [0, 0, 0, 0]
+            [location,distBF2, turnBF] = backForth2(drone, location, bounds, searchWidth, moveIncr, display=False)
+            dSpiral.append(distSpiral)
+            dBF.append(distBF2)
+            tSpiral.append(turnSpiral)
+            if y_len<=x_len:
+                tBF.append(turnBF)
+                area1.append(x_len*y_len)
+            db = searchWidth*int(y_len/searchWidth) + x_len*(int(y_len/searchWidth)+1)
+            numhor_ds = int(y_len/searchWidth)+(int((y_len%searchWidth)/20))
+            numver_ds = int(x_len/searchWidth)+(int((x_len%searchWidth)/20))
+            ds = x_len
+            for i in range(numhor_ds+1):
+                ds = ds + (x_len - (searchWidth*i))
+            for i in range(numver_ds):
+                ds = ds + (y_len - (searchWidth*i))
+            x_len += 100
+        y_len += 100
+
+    plt.figure()
+    plt.plot(area, dSpiral, 'r.', label='Spiral')
+    plt.plot(area, dBF, 'b.', label='Back-and-Forth')
+    plt.xlabel("Area ($cm^2$)")
+    plt.ylabel("Path Distance (cm)")
+    plt.grid()
+    plt.legend()
+    plt.figure()
+    plt.plot(area, tSpiral, 'r.', label='Spiral')
+    plt.plot(area1, tBF, 'b.', label='Back-and-Forth')
+    plt.xlabel("Area (cm)")
+    plt.ylabel("Turns")
+    plt.grid()
+    plt.legend()
+    plt.show()
 
 
 
