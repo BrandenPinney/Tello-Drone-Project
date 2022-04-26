@@ -437,17 +437,15 @@ if __name__ == "__main__":
     BatteryStart = drone.get_battery()
     print("Current battery remaining: ", BatteryStart)
     sleep(0.3)
-    drone.streamon()
-    sleep(0.5)
     drone.takeoff()
     sleep(0.5)
     # END OF SECTION TO COMMENT OUT
-    
-    bounds = [0,221, 0, 221]
+    location = mv.move(location, drone, up=40)
+    bounds = [0,160, 0, 221]
      #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
     start_time = time.time()
     searchWidth = 50
-    moveIncr = 85
+    moveIncr = 75
     [location,dist] = backForth2(drone, location, bounds, searchWidth, moveIncr)
     #plt.xlabel('x (cm)')
     #plt.ylabel('y (cm)')
