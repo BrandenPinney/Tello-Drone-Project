@@ -1,4 +1,3 @@
-
 import cv2 as cv
 from time import sleep
 import movement as mov
@@ -9,7 +8,7 @@ import math
 def snake_exploration(drone, fly_zone, search_width, move_increment, curve=0):
     '''The drone explores a snaking.
     plt.show() needs to be called after if you want to display a plot of the path
-    
+
     Input:
         drone : movement class initialized from movement.py
         fly_zone : [x_min, y_min, x_max, y_max] four vertices representing area to be explored
@@ -19,10 +18,10 @@ def snake_exploration(drone, fly_zone, search_width, move_increment, curve=0):
     Output:
         total_distance (int) : total distance (cm) traveled by the drone '''
 
-    x_min = fly_zone[0] 
-    y_min = fly_zone[2] 
-    x_max = fly_zone[1]  
-    y_max = fly_zone[3] 
+    x_min = fly_zone[0]
+    y_min = fly_zone[2]
+    x_max = fly_zone[1]
+    y_max = fly_zone[3]
 
     # Ensure that the drone is in the lower right corner and rotated correctly
     if round(drone.get_x_location()) != x_min or round(drone.get_y_location()) != y_min or drone.get_angle() != 0:
@@ -37,7 +36,7 @@ def snake_exploration(drone, fly_zone, search_width, move_increment, curve=0):
     y_traversals = int(y_distance/search_width)              # total number of times the drone will travel in the y-axis
     y_moves_before_turn = int(search_width/move_increment)   # number of times the drone will move on the y-axis before turning
     y = 0
-    
+
     while True:
         # CHECK CAMERA
         check_camera(drone)
@@ -114,8 +113,8 @@ def snake_exploration(drone, fly_zone, search_width, move_increment, curve=0):
         # CHECK CAMERA
         check_camera(drone)
         ###################
-        turn_direction = (turn_direction + 1) % 2 
-    
+        turn_direction = (turn_direction + 1) % 2
+
     # return to original location and track the distance
     drone.go_to(0, 0, 0)
     total_distance += int(math.sqrt(drone.get_x_location()**2 + drone.get_y_location()**2))
@@ -126,7 +125,7 @@ def snake_exploration(drone, fly_zone, search_width, move_increment, curve=0):
 def spiral_exploration(drone, fly_zone, search_width, move_increment):
     '''The drone explores a spiral_exploration path. This function needs to be modified to check the camera itself
     plt.show() needs to be called after if you want to display a plot of the path
-     
+
     Input:
         fly_zone : [x_min, y_min, x_max, y_max] four vertices representing area to be explored
         search_width (int): distance (cm) between traversals
@@ -135,9 +134,9 @@ def spiral_exploration(drone, fly_zone, search_width, move_increment):
         total_distance (int) : total distance (cm) traveled by the drone '''
 
     x_min = fly_zone[0]
-    y_min = fly_zone[2] 
-    x_max = fly_zone[1]  
-    y_max = fly_zone[3] 
+    y_min = fly_zone[2]
+    x_max = fly_zone[1]
+    y_max = fly_zone[3]
     total_distance = 0        #keeps track of path distance
     turns = 0            #track # of turnsre
 
@@ -152,14 +151,14 @@ def spiral_exploration(drone, fly_zone, search_width, move_increment):
     f = 0                                    # zero until the drone has gone in one straight line
 
     while True: # Drone cannot travel less than 20 cm
-        # travel the y_distance 
+        # travel the y_distance
         if round(drone.get_angle())==90 or round(drone.get_angle())==270:
             if y_distance < 20:
                 break
             ##### CHECK CAMERA
             check_camera(drone)
             ###################
-            #sleep(0.2)    
+            #sleep(0.2)
             if y_traversed + move_increment > y_distance:
                 if y_distance-y_traversed>=20:
                     target_x = drone.get_x_location() + (y_distance - y_traversed) * math.cos(math.radians(drone.get_angle()))
@@ -170,9 +169,9 @@ def spiral_exploration(drone, fly_zone, search_width, move_increment):
 
                 if f != 0:                  # decrease distance to travel each time after first line
                     y_distance -= search_width
-                location =drone.move(location,drone, ccw=90)
+                drone.move(ccw=90)
                 turns += 1
-                f = 1 
+                f = 1
 
             else:
                 y_traversed += move_increment
@@ -185,7 +184,7 @@ def spiral_exploration(drone, fly_zone, search_width, move_increment):
         elif round(drone.get_angle())==0 or round(drone.get_angle())==180:
             if x_distance < 20:
                 break
-            ##### CHECK CAMERA 
+            ##### CHECK CAMERA
             check_camera(drone)
             ###################
             if x_traversed + move_increment > x_distance:
@@ -206,7 +205,7 @@ def spiral_exploration(drone, fly_zone, search_width, move_increment):
                 target_y = drone.get_y_location() + move_increment * math.sin(math.radians(drone.get_angle()))
                 drone.go_to(target_x, target_y, drone.get_angle())
                 total_distance += move_increment
-    
+
     # return to original location and track the distance
     drone.go_to(0, 0, 0)
     total_distance += int(math.sqrt(drone.get_x_location()**2 + drone.get_y_location()**2))
@@ -231,14 +230,41 @@ def check_camera(drone):
             x, y = info[0]
             if x != 0:
                 break
+    cv.imwrite('fan.png', img)
     trackObject(drone, info, turbines, [drone.get_x_location(), drone.get_y_location(), drone.get_angle()])
 
 #bounds = [0, 328, 0, 324]    #actual size of path in drone cage
 if __name__ == "__main__":
-    turbines = {"WindTurbine_2": [1, 0, 0, 0]}
+
+    battery = 0
+
+    turbines = {
+
+		"WindTurbine_1": [0, 0, 0, 0],
+		"WindTurbine_2": [0, 0, 0, 0],
+		"WindTurbine_3": [0, 0, 0, 0]
+
+	}
+
     drone = mov.movement()
-    bounds = [0, 161, 0, 221]#161
-    search_width = 50
-    move_increment = 75
-    dist = snake_exploration(drone, bounds, search_width, move_increment)
+    bounds = [0, 720, 0, 540]
+    search_width = 180
+    move_increment = 90
+
+    # ~ print("HERE")
+
+    # ~ for i in range(0, 16):
+
+        # ~ print("BATTERY")
+        # ~ drone.drone.get_battery()
+        # ~ print("SLEEPING")
+        # ~ sleep(10)
+        # ~ print("SLEPT")
+
+    dist = spiral_exploration(drone, bounds, search_width, move_increment)
+    print("Battery depletion:", battery - drone.drone.get_battery())
+    print("Distance traveled:", dist)
     drone.land()
+
+    print("Battery depletion:", battery - drone.drone.get_battery())
+    print("Distance traveled:", dist)

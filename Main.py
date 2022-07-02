@@ -49,7 +49,7 @@ def track_object(drone, info, LOCATION, turbines, DETECTED_OBJECT):
         distance = int((650 * 40.64) / width) - 40
         if distance < 20:
             distance = 20
-        
+
         targetx = LOCATION[0] + distance * math.cos(math.radians(LOCATION[2]))
         targety = LOCATION[1] + distance * math.sin(math.radians(LOCATION[2]))
 
@@ -58,19 +58,19 @@ def track_object(drone, info, LOCATION, turbines, DETECTED_OBJECT):
                 LOCATION = mv.move(LOCATION, drone, ccw=45)
                 sleep(0.5)
                 return LOCATION, DETECTED_OBJECT
-    
+
         if 0 < x <= 340:
             # The drone needs to angle to the left to center the target.
             new_angle = int(round(((360 - x) / 360) * 41.3))
-            LOCATION = mv.move(LOCATION, drone, ccw=new_angle)        
+            LOCATION = mv.move(LOCATION, drone, ccw=new_angle)
             return LOCATION, DETECTED_OBJECT
 
         elif x >= 380:
             # The drone needs to angle to the right to center the target.
             new_angle = int(round(((x - 360) / 360) * 41.3))
-            LOCATION = mv.move(LOCATION, drone, cw=new_angle)        
+            LOCATION = mv.move(LOCATION, drone, cw=new_angle)
             return LOCATION, DETECTED_OBJECT
-    
+
         if area > FB_RANGE[0] and area < FB_RANGE[1]:
             # The drone has approached the target and will scan for a QR code
             qr_detection(drone, LOCATION, turbines)
@@ -91,7 +91,7 @@ def track_object(drone, info, LOCATION, turbines, DETECTED_OBJECT):
 def qr_detection(drone, LOCATION, turbines):
     '''Begins searching for a QR code at the current location of the drone'''
     drone.move_down(80)
-    QR = None 
+    QR = None
     video.stop_haar()
     img_counter = 0
     while True:
@@ -100,6 +100,7 @@ def qr_detection(drone, LOCATION, turbines):
         img = cv.resize(img, (W, H))
 
         if len(QR) > 0:
+            cv.imwrite('qr.png', img)
             print(">>>>>>>>>>>>>>>>QR CODE FOUND: ", QR)
             print(LOCATION[0], LOCATION[1])
             TURBINE_LOCATIONS.append([LOCATION[0] - 60, LOCATION[0] + 60, LOCATION[1] - 60, LOCATION[1] + 60, QR, LOCATION[0], LOCATION[1]])
@@ -190,7 +191,7 @@ def gui_interface(turbines):
         img, info = hc.findTurbine(img)
         LOCATION, DETECTED_OBJECT = track_object(drone, info, LOCATION, turbines, DETECTED_OBJECT)
         img = cv.resize(img, None, fx=1, fy=1, interpolation=cv.INTER_AREA)
-        
+
 
 if __name__ == "__main__":
     turbines = {"WindTurbine_2": [0, 1, 0, 0]} # Target: [front, right, back, left]
@@ -214,4 +215,3 @@ if __name__ == "__main__":
         img, info = hc.findTurbine(img)
         LOCATION, DETECTED_OBJECT = track_object(drone, info, LOCATION, turbines, DETECTED_OBJECT)
         img = cv.resize(img, None, fx=1, fy=1, interpolation=cv.INTER_AREA)
-        

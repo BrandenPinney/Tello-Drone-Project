@@ -18,8 +18,8 @@ class movement():
         self.turbine_locations = []        # List of all known turbine locations
         self.video_stream = None
         self.takeoff()
-    
-    def takeoff(self, height=40):
+
+    def takeoff(self, height=70):
         '''Initializes and launches the drone and rises 40 cm as a default.'''
         self.drone.connect()
         sleep(1)
@@ -32,8 +32,8 @@ class movement():
         print("Current battery remaining: ", self.drone.get_battery())
         self.new_location[2] = self.drone.get_height()
         self.move(up=height)
-        
-    
+
+
     def land(self):
         '''Lands the drone at the end of flight.'''
         print("Battery remaining >>>>>> ", self.drone.get_battery())
@@ -45,13 +45,13 @@ class movement():
 
     def append_turbine_locations(self, QR):
         '''Add the location of a found turbine to the list and create the no-fly zone around it.'''
-        self.turbine_locations.append([self.new_location[0] - 40, self.new_location[0] + 40, self.new_location[1] - 40, 
+        self.turbine_locations.append([self.new_location[0] - 40, self.new_location[0] + 40, self.new_location[1] - 40,
                                        self.new_location[1] + 40, QR, self.new_location[0], self.new_location[1]])
 
     def get_turbine_locations(self):
         '''Returns the list of all known turbines locatoins, their no-fly zones, and their QR code data.'''
         return self.turbine_locations
-        
+
     def get_location(self):
         '''Returns a list containing the current x, y, z coordinates of the drone and the current angle relative to takeoff.'''
         return self.new_location
@@ -59,23 +59,23 @@ class movement():
     def get_x_location(self):
         '''Returns the current x location of the drone.'''
         return self.new_location[0]
-    
+
     def get_y_location(self):
         '''Returns the current y location of the drone.'''
         return self.new_location[1]
-    
+
     def get_z_location(self):
         '''Returns the altitude currently in the location list.'''
         return self.new_location[2]
-    
+
     def get_angle(self):
         '''Returns the current angle of the drone.'''
         return self.new_location[3]
-    
+
     def get_drone(self):
         '''Returns the class controlling the SDK for the drone.'''
         return self.drone
-    
+
     def video(self):
         '''Returns the live stream video'''
         return self.video_stream
@@ -105,7 +105,7 @@ class movement():
             # counter-clockwise takes priority -- updates angle after counter-clockwise rotation
             ccw = round(ccw)
             self.drone.rotate_counter_clockwise(ccw)
-            self.new_location[3] = (self.new_location[3] + ccw) % 360 
+            self.new_location[3] = (self.new_location[3] + ccw) % 360
 
         elif ccw == 0 and cw != 0:
             # updates angle after clockwise rotation
@@ -114,11 +114,11 @@ class movement():
 
             if cw > self.new_location[3]:
                 # Returned angle if cw angle is greater than the current angle
-                self.new_location[3] = 360 - abs((self.new_location[3] - cw)) 
+                self.new_location[3] = 360 - abs((self.new_location[3] - cw))
 
             else:
                 # Returned angle if cw angle is less than the current angle
-                self.new_location[3] = abs((self.new_location[3] - cw)) 
+                self.new_location[3] = abs((self.new_location[3] - cw))
 
         if fwd != 0:
             # forward takes priority -- updates x and y coordinates after movement
@@ -194,7 +194,7 @@ class movement():
 
         # The following cases for rotation are calculated by placing the desired
         # location at the orgin of a cartesian grid and having the drone rotate
-        # based on the relative qudrant of the drone and the current angle 
+        # based on the relative qudrant of the drone and the current angle
         #          /|relative angle
         #         / |
         #        /  |
@@ -206,8 +206,8 @@ class movement():
         #  /        |
         # /)return angle
         #___________
-        # cases for rotation based on current cartesian quadrant of the drone 
-        
+        # cases for rotation based on current cartesian quadrant of the drone
+
         if quadrant == 1:# quadrant 1
             relative_angle = 90 - return_angle
             if angle < return_angle:
@@ -328,13 +328,13 @@ class movement():
         if len(possible_collisions) != 0:
             possible_collisions = sorted(possible_collisions, key=operator.itemgetter(4)) # sort the possible collision list by distance from drone
             starting_point = self.new_location
-            for i in range(point_distance): 
+            for i in range(point_distance):
                     targetx = i * math.cos(vector_angle)
                     targety = i * math.sin(vector_angle)
 
                     for j in possible_collisions:
                         centerx = j[5]
-                        centery = j[6] 
+                        centery = j[6]
                         if(j[0] < targetx < j[1]) and (j[2] < targety < j[3]): # if the drone will pass near the turbine
                             if(quadrant == 1) or (quadrant == 3): # if in quadrant 1 or 3
                                 right_corner = [j[1], j[2]] # bottom right corner of the no-go zone

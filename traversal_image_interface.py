@@ -28,7 +28,7 @@ def trackObject(drone, info, turbines, starting_location):
         img = frame.frame
         img = cv.resize(img, (w, h))
         img, info = hc.findTurbine(img)
-    
+
     area = info[1]  # The area of the bounding box
     x, y = info[0]  # The x and y location of the center of the bounding box in the frame
     width = info[2] # The width of the bounding box
@@ -52,21 +52,21 @@ def trackObject(drone, info, turbines, starting_location):
         if(0 < x <= 340):
             # The drone needs to angle to the left to center the target.
             new_angle = int(round(((360 - x) / 360) * 41.3))
-            drone.move(ccw=new_angle)  
-            info = check_camera(camera)      
+            drone.move(ccw=new_angle)
+            info = check_camera(camera)
             trackObject(drone, info, turbines, starting_location)
             img_pass = 1
 
         elif(x >= 380):
             # The drone needs to angle to the right to center the target.
             new_angle = int(round(((x - 360) / 360) * 41.3))
-            drone.move(cw=new_angle) 
-            info = check_camera(camera)       
+            drone.move(cw=new_angle)
+            info = check_camera(camera)
             trackObject(drone, info, turbines, starting_location)
             img_pass = 1
 
         if area > fbRange[0] and area < fbRange[1] and img_pass == 0:
-            # The drone has approached the target and will scan for a QR code 
+            # The drone has approached the target and will scan for a QR code
             qr_detection(drone, turbines, starting_location)
 
         elif area > fbRange[1] and img_pass == 0:
@@ -86,8 +86,8 @@ def trackObject(drone, info, turbines, starting_location):
 
 def qr_detection(drone, turbines, starting_location):
     '''Begins searching for a QR code at the current location of the drone'''
-    drone.move(down=80)
-    QR = None 
+    drone.move(down=110)
+    QR = None
     video = drone.video()
     video.stop_haar()
     img_counter = 0
@@ -104,9 +104,9 @@ def qr_detection(drone, turbines, starting_location):
             for i in turbines:
                 if i == QR:
                     turbine_found = 1
-                    drone.move(up=60)
+                    drone.move(up=110)
                     mission.mission0(drone, turbines[i], QR)
-                    turbines.pop(i) 
+                    turbines.pop(i)
 
                     if len(turbines) != 0:
                         video.start_haar()
@@ -124,7 +124,7 @@ def qr_detection(drone, turbines, starting_location):
                         quit()
 
             if turbine_found == 0:
-                drone.move(location, drone, up=70)
+                drone.move(up=110)
                 video.start_haar()
                 sleep(0.5)
                 video.stop_qr()
@@ -172,7 +172,7 @@ def test(mission_list, turbine_list):
 if __name__ == "__main__":
     turbines = {"WindTurbine_1": [0, 0, 0, 0]}
     drone = mov.movement()
-    
+
     while True:
         frame = drone.get_frame_read()
         sleep(0.2)
@@ -181,4 +181,3 @@ if __name__ == "__main__":
         img, info = hc.findTurbine(img)
         location = trackObject(drone, info, location, turbines)
         img = cv.resize(img, None, fx=1, fy=1, interpolation=cv.INTER_AREA)
-        
